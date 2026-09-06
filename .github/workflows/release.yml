@@ -104,6 +104,8 @@ jobs:
 
       - name: Install docs dependencies
         working-directory: docs
+        # Lockfile must not contain leftover Darwin sharp binaries as required
+        # packages. `npm ci` on Ubuntu fail-closes those with EBADPLATFORM.
         run: npm ci
 
       - name: Generate static Docus site
