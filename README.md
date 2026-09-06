@@ -1,4 +1,4 @@
-# Grok Desktop for macOS
+# Grok Desktop App for macOS
 
 **v1.0.0** — a native window for [grok.com](https://grok.com), by **Kolja Nolte**.
 
