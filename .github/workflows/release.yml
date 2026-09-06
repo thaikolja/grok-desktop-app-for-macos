@@ -1,0 +1,140 @@
+name: Release
+
+# Builds a universal .app (Apple Silicon + Intel), packages a DMG and a zip
+# of the .app, attaches them to the GitHub Release, then deploys Docus to
+# GitHub Pages. The docs job runs only after the macOS artifacts succeed.
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+jobs:
+  macos:
+    name: Universal macOS app
+    runs-on: macos-15
+    timeout-minutes: 60
+    permissions:
+      contents: write
+    outputs:
+      version: ${{ steps.package.outputs.VERSION }}
+      dmg_name: ${{ steps.package.outputs.DMG_NAME }}
+      zip_name: ${{ steps.package.outputs.ZIP_NAME }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Select Xcode
+        uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: latest-stable
+
+      - name: Show toolchain
+        run: |
+          xcodebuild -version
+          sw_vers
+          uname -m
+
+      - name: Package universal .app, DMG, and zip
+        id: package
+        run: |
+          chmod +x scripts/package-macos.sh
+          scripts/package-macos.sh
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: grok-desktop-macos-universal
+          path: dist/*
+          if-no-files-found: error
+
+      - name: Attach files to GitHub Release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/*
+          generate_release_notes: true
+          fail_on_unmatched_files: true
+          body: |
+            Universal macOS build for **Apple Silicon** and **Intel**.
+
+            - Disk image: `Grok-Desktop-${{ steps.package.outputs.VERSION }}-universal.dmg`
+            - App archive: `Grok-Desktop-${{ steps.package.outputs.VERSION }}-universal.zip`
+
+            Drag **Grok Desktop** into Applications. The first open needs Control-click → **Open**. This CI build is ad-hoc signed, not notarized.
+
+            User guide: https://thaikolja.github.io/grok-desktop-app-for-macos/
+
+  docs:
+    name: Deploy Docus
+    needs: macos
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure GitHub Pages
+        id: pages
+        uses: actions/configure-pages@v5
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: docs/package-lock.json
+
+      - name: Install docs dependencies
+        working-directory: docs
+        run: npm ci
+
+      - name: Generate static Docus site
+        working-directory: docs
+        env:
+          # origin has no path (https://owner.github.io). base_path is /repo/ for project sites.
+          NUXT_SITE_URL: ${{ steps.pages.outputs.origin }}
+          NUXT_APP_BASE_URL: ${{ steps.pages.outputs.base_path }}
+          NUXT_PUBLIC_APP_VERSION: ${{ needs.macos.outputs.version }}
+          NUXT_PUBLIC_GITHUB_REPO: ${{ github.repository }}
+        run: |
+          if [ -z "$NUXT_APP_BASE_URL" ]; then
+            NUXT_APP_BASE_URL=/
+          fi
+          case "$NUXT_APP_BASE_URL" in
+            */) ;;
+            *) NUXT_APP_BASE_URL="${NUXT_APP_BASE_URL}/" ;;
+          esac
+          export NUXT_APP_BASE_URL
+          echo "NUXT_SITE_URL=$NUXT_SITE_URL"
+          echo "NUXT_APP_BASE_URL=$NUXT_APP_BASE_URL"
+          npm run generate
+
+      - name: Keep GitHub Pages from ignoring _nuxt
+        run: touch docs/.output/public/.nojekyll
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: docs/.output/public
+
+      - name: Deploy to GitHub Pages
+        id: deploy
+        uses: actions/deploy-pages@v4

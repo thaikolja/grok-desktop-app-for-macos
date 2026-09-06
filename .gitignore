@@ -1,0 +1,14 @@
+.DS_Store
+xcuserdata/
+*.xcuserstate
+DerivedData/
+.ci/
+dist/
+docs/node_modules/
+docs/.nuxt/
+docs/.output/
+docs/.data/
+docs/dist/
+*.moved-aside
+.idea/
+.vscode/
