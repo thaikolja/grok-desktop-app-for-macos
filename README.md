@@ -29,6 +29,8 @@ The first open may need Control-click → **Open**. The CI build is ad-hoc signe
 
 There is one file for M chips and Intel. You do not pick an architecture.
 
+This is the first public release. Bugs can happen. If something breaks, use **← Grok**, reload, or quit and reopen.
+
 ## Open from source
 
 1. Open `GrokDesktop.xcodeproj` in Xcode.
@@ -49,6 +51,7 @@ The first launch opens `https://grok.com`. Sign in on the page. Stay in this app
 | ⌘U | Usage stats |
 | ⌥⌘P | Always on top |
 | ⌘+ / ⌘- / ⌘0 | Zoom |
+| ⌘P | Print |
 
 ## Build from the command line
 
