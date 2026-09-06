@@ -4,7 +4,7 @@ All notable changes to Grok Desktop for macOS are listed here.
 
 ## 1.0.0 — 2026-09-07
 
-First stable release. A native macOS window for [grok.com](https://grok.com). Not a browser. Not Electron. Not an xAI product.
+First stable release. A native macOS window for [grok.com](https://grok.com). Not a browser. Not a flimsy Electron port. Not an xAI product.
 
 ### Added
 
